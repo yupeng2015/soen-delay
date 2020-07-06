@@ -1,0 +1,24 @@
+{
+  "name": "soen/delay",
+  "description": "",
+  "type": "library",
+  "require": {
+    "php": ">=7.0.0",
+    "psr/event-dispatcher": ">=1.0",
+    "psr/log": ">=1.0",
+    "symfony/console": "~5.0"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "soen",
+      "email": "soen66@163.com"
+    }
+  ],
+  "autoload": {
+      "psr-4": {
+        "Soen\\Delay\\": "src/"
+      }
+  },
+  "minimum-stability": "dev"
+}
