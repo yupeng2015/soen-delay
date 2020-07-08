@@ -4,6 +4,7 @@
 namespace Soen\Delay;
 
 
+use Swoole\Coroutine;
 use Swoole\Timer;
 
 class Polling
@@ -18,8 +19,8 @@ class Polling
     }
 
     public function run () {
-        $i = 1;
-        Timer::tick($this->duration, function (){
+        $i = 0;
+        Timer::tick($this->duration, function ()use(&$i){
             $this->handle($i);
         });
     }
@@ -27,23 +28,31 @@ class Polling
     public function handle (&$i) {
         $jobIds = $this->getOverdueJobIds();
         $topics = [];
-        foreach ($jobIds as &$id) {
-            $jobDetail = $this->getJobDetail($id);
-            $topics[$jobDetail['topic']][] = $jobDetail['id'];
+        if(!empty($jobIds)){
+            foreach ($jobIds as &$id) {
+                $jobDetail = $this->getJobDetail($id);
+                if (!$jobDetail) {
+                    continue;
+                }
+                $topics[$jobDetail->topic][] = $jobDetail->id;
+            }
+            foreach ($topics as $topic  =>  $jobIds) {
+                $this->moveJobToReadyQueue($topic, $jobIds);
+            }
+            $i++;
+            echo "执行了{$i}次扫描";
         }
-        foreach ($topics as $topic  =>  $jobIds) {
-            $this->moveJobToReadyQueue($topic, $jobIds);
-        }
-        $i++;
-        echo "执行了{$i}次扫描";
     }
 
     /**
      * @param $id
      * @return Job
      */
-    public function getJobDetail ($id):Job {
+    public function getJobDetail ($id) {
         $all = $this->driver->hGetAll(Config::PREFIX_JOB_POOL . $id);
+        if (!$all || empty($all)) {
+            return false;
+        }
         $jobDetail = new Job($all['id'], $all['body'], $all['delay'], $all['topic'], $all['ttr']);
         return $jobDetail;
     }
@@ -58,12 +67,16 @@ class Polling
 
     /**
      * @param $topic
-     * @param mixed ...$ids
+     * @param array $ids
      */
-    public function moveJobToReadyQueue ($topic, ...$ids) {
+    public function moveJobToReadyQueue ($topic, $ids) {
         $this->driver->multi();
-        $this->driver->lPush($topic, ...$ids);
-        $this->driver->zRem(Config::JOB_BUCKETS, ...$ids);
+        call_user_func_array([$this->driver, 'lPush'], array_merge([$topic], $ids));
+//        $this->driver->lPush($topic, ...$ids);
+        call_user_func_array([$this->driver, 'zRem'], array_merge([Config::JOB_BUCKETS], $ids));
+//        $this->driver->zRem(Config::JOB_BUCKETS, ...$ids);
+        call_user_func_array([$this->driver, 'set'], ['teshu', 'hahahaha']);
+//        $this->driver->set('teshu', 'hahahaha');
         $this->driver->exec();
     }
 

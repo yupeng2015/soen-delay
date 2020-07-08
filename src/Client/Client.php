@@ -28,8 +28,10 @@ class Client
         $this->driver->multi();
         $this->driver->hMset($key, [
                 'id'    => $id,
+                'delay'    => $delayTime,
                 'topic' =>  $topic,
-                'body'  =>  $body
+                'ttr'   =>  100,
+                'body'  =>  json_encode($body, JSON_UNESCAPED_UNICODE)
             ]);
         $this->driver->expire($key, $delayTime + $readyMaxLifetime);
         $this->driver->zAdd(Config::JOB_BUCKETS, time() + $delayTime, $id);
