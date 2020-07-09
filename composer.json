@@ -6,7 +6,8 @@
     "php": ">=7.0.0",
     "psr/event-dispatcher": ">=1.0",
     "psr/log": ">=1.0",
-    "symfony/console": "~5.0"
+    "symfony/console": "~5.0",
+    "soen/container": "dev-master"
   },
   "license": "MIT",
   "authors": [
