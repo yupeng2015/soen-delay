@@ -4,6 +4,7 @@
 namespace Soen\Delay;
 
 
+use Soen\Delay\Event\DelayExecute;
 use Swoole\Coroutine;
 use Swoole\Timer;
 
@@ -11,11 +12,13 @@ class Polling
 {
     public $duration;
     public $driver;
+    public $dispatch;
 
     function __construct(int $duration)
     {
         $this->duration = $duration;
         $this->driver = \App::redis();
+        $this->dispatch = \App::event();
     }
 
     public function run () {
@@ -26,22 +29,30 @@ class Polling
     }
 
     public function handle (&$i) {
-        $jobIds = $this->getOverdueJobIds();
-        $topics = [];
-        if(!empty($jobIds)){
-            foreach ($jobIds as &$id) {
-                $jobDetail = $this->getJobDetail($id);
-                if (!$jobDetail) {
-                    continue;
+        try{
+            $jobIds = $this->getOverdueJobIds();
+            $topics = [];
+            if(!empty($jobIds)){
+                foreach ($jobIds as &$id) {
+                    $jobDetail = $this->getJobDetail($id);
+                    if (!$jobDetail) {
+                        continue;
+                    }
+                    $topics[$jobDetail->topic][] = $jobDetail->id;
                 }
-                $topics[$jobDetail->topic][] = $jobDetail->id;
+                foreach ($topics as $topic  =>  $jobIds) {
+                    $this->moveJobToReadyQueue($topic, $jobIds);
+                }
+                $i++;
+                $this->dispatch->dispatch(new DelayExecute('this is job'));
+//            echo "执行了{$i}次扫描";
             }
-            foreach ($topics as $topic  =>  $jobIds) {
-                $this->moveJobToReadyQueue($topic, $jobIds);
-            }
-            $i++;
-            echo "执行了{$i}次扫描";
+        }catch (\Throwable $exception){
+            $message = $exception->getMessage();
+            \App::log()->error($message);
+            throw new \RuntimeException($message);
         }
+
     }
 
     /**
