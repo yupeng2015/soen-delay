@@ -1,6 +1,6 @@
 {
   "name": "soen/delay",
-  "description": "",
+  "description": "soen/delay",
   "type": "library",
   "require": {
     "php": ">=7.0.0",
